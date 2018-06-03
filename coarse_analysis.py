@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import progressbar
 
 def evening_locations(data, prefix, lower_bound = 7, upper_bound = 18):
 
@@ -27,22 +28,21 @@ def evening_locations(data, prefix, lower_bound = 7, upper_bound = 18):
     for i in callerID:
         prefixes.append(i[0])
 
-    prefixes = np.asarray(prefix)
+    prefixes = np.asarray(prefixes)
     prefixes = prefixes.astype(int)
     
     unique, counts = np.unique(prefixes, return_counts=True)
-    print ('there are {} refugee calls in this dataset'.format(counts[1]))
+    print ('there are {} calls made by callers with prefix {} in this dataset'.format(counts[1], prefix))
     
     #identify callerIDs with the correct prefix
     to_analyse = np.unique(callerID[prefixes == prefix])
-    print (len(to_analyse))
 
     #apply time constraints
     h1 = callerID[timestamp.hour >= 18]
     h2 = callerID[timestamp.hour <= 7]
     h = np.append(h1,h2)
     overlap = np.intersect1d(h,to_analyse)
-    print (len(overlap))
+    print ('there are {} callers who match the time constrains with prefix {}'.format(len(overlap), prefix))
 
     #create dictionary
     evening_location = {}
@@ -53,6 +53,10 @@ def evening_locations(data, prefix, lower_bound = 7, upper_bound = 18):
         }
 
     #bottleneck - could parallelise better
+    print ('writing information to dictionary:')
+    bar = progressbar.ProgressBar(maxval=len(overlap), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+    bar.start()
+    
     counter = 0
     for i in overlap:
         location =  np.where(callerID == i)
@@ -60,20 +64,63 @@ def evening_locations(data, prefix, lower_bound = 7, upper_bound = 18):
         evening_location[i]['cities'] = cities
         dates = date[location[0]]
         evening_location[i]['dates'] = dates
+        bar.update(counter)
         counter +=1
-        if counter%100 == 0:
-            print (counter)
+    bar.finish()
 
+        
     return evening_location
+
+
+
+def mobility(dictionary, low_threshold = 2, medium_threshold = 5):
+
+    #find the refugees who spend their time in more that one city in the evening over the month
+    mobile = []
+    for i in dictionary:
+        unique, counts = np.unique(dictionary[i]['cities'], return_counts=True)
+        if len(unique) > 1:
+            mobile.append(i)
+            
+    print ('there are {} callers in this dataset who moved cities in this dataset'.format(len(mobile)))
+
+    #assign an entry to each callerID which gives the cities 'moved' to
+    for i in mobile:
+        moved = []
+        moved.append(dictionary[i]['cities'][0])
+        counter = 0
+        for j in range(1,len(dictionary[i]['cities'])):
+            if dictionary[i]['cities'][j] == dictionary[i]['cities'][j-1]:
+                counter += 1
+            else:
+                counter = 0
+            if counter == 4 and dictionary[i]['cities'][j] != moved[-1]:
+                moved.append(dictionary[i]['cities'][j])
+        dictionary[i]['moved'] = moved
+
+    #class callers as low, medium and high mobility
+    low_mobility = []
+    medium_mobility = []
+    high_mobility = []
+    for i in mobile:
+        if len(dictionary[i]['moved']) <= low_threshold:
+            low_mobility.append(i)
+        elif low_threshold < len(dictionary[i]['moved']) <= medium_threshold:
+            medium_mobility.append(i)
+        else:
+            high_mobility.append(i)
+
+    print ('There are {} callers classed as low mobility in this dataset'.format(len(low_mobility)))
+    print ('There are {} callers classed as medium mobility in this dataset'.format(len(medium_mobility)))
+    print ('There are {} callers classed as high mobility in this dataset'.format(len(high_mobility)))
+
+    return low_mobility, medium_mobility, high_mobility, dictionary
 
 data = pd.read_csv('./Dataset 3/Dataset 3_201701_In.csv')
 
 dic = evening_locations(data,2)
 
-mobile = [] 
-for i in dic:
-    unique, counts = np.unique(dic[i]['cities'], return_counts=True)
-    if len(unique) > 1:
-        mobile.append(i)
+low, med, high, dic = mobility(dic)
 
-print ('there are {} callers out ot 50,000 refugees who moved cities'.format(len(mobile)))
+print ('finished')
+
