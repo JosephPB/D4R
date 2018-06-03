@@ -110,17 +110,31 @@ def mobility(dictionary, low_threshold = 2, medium_threshold = 5):
         else:
             high_mobility.append(i)
 
-    print ('There are {} callers classed as low mobility in this dataset'.format(len(low_mobility)))
-    print ('There are {} callers classed as medium mobility in this dataset'.format(len(medium_mobility)))
-    print ('There are {} callers classed as high mobility in this dataset'.format(len(high_mobility)))
+    print ('there are {} callers classed as low mobility in this dataset'.format(len(low_mobility)))
+    print ('there are {} callers classed as medium mobility in this dataset'.format(len(medium_mobility)))
+    print ('there are {} callers classed as high mobility in this dataset'.format(len(high_mobility)))
 
     return low_mobility, medium_mobility, high_mobility, dictionary
 
-data = pd.read_csv('./Dataset 3/Dataset 3_201701_In.csv')
+if __name__ == '__main__':
 
-dic = evening_locations(data,2)
+    dictionary_main = {}
+    
+    with open('dataset_3.txt', 'r') as dataset_3:
+        for line in dataset_3:
+            data = pd.read_csv(line[:-1])
 
-low, med, high, dic = mobility(dic)
+            dictionary_sub = evening_locations(data,2)
 
-print ('finished')
+            for i in dictionary_sub:
+                if i in dictionary_main:
+                    dictionary_main[i]['cities'] = np.append(dictionary_main[i]['cities'], dictionary_sub['cities'])
+                    dictionary_main[i]['dates'] = np.append(dictionary_main[i]['cities'], dictionary_sub['dates'])
+                else:
+                    dictionary_main[i] = {
+                        'cities': dictionary_sub[i]['cities'],
+                        'dates': dictionary_sub[i]['dates']
+                    }
+    print (len(dictionary_main))
 
+            
