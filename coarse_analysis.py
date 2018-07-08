@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import progressbar
+import cPickle as pickle
 
 def evening_locations(data, prefix, lower_bound = 7, upper_bound = 18):
 
@@ -121,20 +122,33 @@ if __name__ == '__main__':
     dictionary_main = {}
     
     with open('dataset_3.txt', 'r') as dataset_3:
+        k = 0
         for line in dataset_3:
+            print ('working on month {}'.format(k))
+            if k == 24:
+                break
             data = pd.read_csv(line[:-1])
 
             dictionary_sub = evening_locations(data,2)
 
             for i in dictionary_sub:
                 if i in dictionary_main:
-                    dictionary_main[i]['cities'] = np.append(dictionary_main[i]['cities'], dictionary_sub['cities'])
-                    dictionary_main[i]['dates'] = np.append(dictionary_main[i]['cities'], dictionary_sub['dates'])
+                    dictionary_main[i]['cities'] = np.append(dictionary_main[i]['cities'], dictionary_sub[i]['cities'])
+                    dictionary_main[i]['dates'] = np.append(dictionary_main[i]['dates'], dictionary_sub[i]['dates'])
                 else:
                     dictionary_main[i] = {
                         'cities': dictionary_sub[i]['cities'],
                         'dates': dictionary_sub[i]['dates']
                     }
-    print (len(dictionary_main))
+            #with open('evening_location_{}.pkl'.format(k)) as sub:
+            #    pickle.dump(dictionary_sub, sub)
+            
+            print ("main dictionary is of length {}".format(len(dictionary_main)))
+            k += 1
+    
+    print ('writing pickling information')
+    
+    with open("evening_location_main_unordered.pkl", "wb") as fp:   #Pickling
+        pickle.dump(dictionary_main, fp,1)
 
             
